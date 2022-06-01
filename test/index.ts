@@ -1,19 +1,31 @@
 import { expect } from "chai";
+import { loadFixture, deployContract } from "ethereum-waffle";
 import { ethers } from "hardhat";
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
+describe("Donation", function () {
+  async function fixture() {
+    const Donation = await ethers.getContractFactory("Donation");
+    const donation = await Donation.deploy();
+    await donation.deployed();
 
-    expect(await greeter.greet()).to.equal("Hello, world!");
+    return donation;
+  }
 
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
+  it("Should create campaign", async function () {
+    const aDayInSeconds = 86400; //a day in seconds
+    const donation = await loadFixture(fixture);
 
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
+    await donation.newCampaign(
+      "Save the planet",
+      "Description for save the planet",
+      Math.round(new Date().getTime() / 1000) + aDayInSeconds,
+      BigInt(100 * 10 ** 18),
+    );
 
-    expect(await greeter.greet()).to.equal("Hola, mundo!");
+    const campaign1 = await donation.campaigns(0);
+
+    expect(campaign1.name).to.be.equal("Save the planet");
+    expect(campaign1.description).to.be.equal("Description for save the planet");
+    expect(campaign1.moneyGoal).to.be.equal(BigInt(100 * 10 ** 18));
   });
 });
