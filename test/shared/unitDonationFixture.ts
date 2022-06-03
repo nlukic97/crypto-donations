@@ -9,7 +9,7 @@ type UnitDonationFixtureType = {
 
 export const unitDonationFixture: Fixture<UnitDonationFixtureType> = async (signers: Wallet[]) => {
   const deployer: Wallet = signers[0]; // where does this signer come from?
-  console.log(`Here is the deployer: ${deployer.address}`); // logs the address
+  // console.log(`Here is the deployer: ${deployer.address}`); // logs the address
 
   const DonationFactory: ContractFactory = await ethers.getContractFactory("Donation");
 
