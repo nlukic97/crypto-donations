@@ -8,12 +8,10 @@ type UnitDonationFixtureType = {
 };
 
 export const unitDonationFixture: Fixture<UnitDonationFixtureType> = async (signers: Wallet[]) => {
-  const deployer: Wallet = signers[0]; // where does this signer come from?
-  // console.log(`Here is the deployer: ${deployer.address}`); // logs the address
-
   const DonationFactory: ContractFactory = await ethers.getContractFactory("Donation");
 
   /* -------------- */
+  // const deployer: Wallet = signers[0]; // where does this signer come from?
   // const Donation: Donation = (await DonationFactory.connect(deployer).deploy()) as Donation; // Exceeds block gas limit for some reason
   const Donation: Donation = (await DonationFactory.deploy()) as Donation; // this works
   /* -------------- */

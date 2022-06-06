@@ -25,42 +25,48 @@ contract Donation is Ownable {
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
 
-    event NewCampaign(string _name, string _description, uint256 _timeGoal, uint256 _moneyGoal);
+    event NewCampaign(string _title, string _description, uint256 _timeGoal, uint256 _moneyGoal);
     event NewDonation(uint256 _campaignId, uint256 _amount);
     event FundsWithdrawn(uint256 id, uint256 amount);
 
+    error NoEmptyStrings();
+    error InvalidTimeGoal();
+    error InsufficientAmount();
+    error CampaignIsInactive();
+    error NonExistantCampaign();
+    error ActiveCampaign();
+
     modifier noEmptyStrings(string calldata _string) {
-        if (isEmptyString(_string)) revert("No empty strings");
+        if (keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""))) revert NoEmptyStrings();
         _;
     }
 
     modifier checkTime(uint256 _timeGoal) {
-        // must be 24 hours at the very least. But block.timestamp is not accurate
-        if (_timeGoal > block.timestamp == false) revert("Invalid time goal");
+        if (_timeGoal > block.timestamp == false) revert InvalidTimeGoal();
         _;
     }
 
     modifier validateFunds(uint256 amount) {
-        if (amount < 1) revert("Insufficient amount");
+        if (amount < 1) revert InsufficientAmount();
         _;
     }
 
     modifier registered(uint256 id) {
-        if (campaigns[id].registered == false) revert("Non-existant campaign");
+        if (campaigns[id].registered == false) revert NonExistantCampaign();
         _;
     }
 
     modifier withFunds() {
-        if (msg.value <= 0) revert("Insuficcient amount");
+        if (msg.value <= 0) revert InsufficientAmount();
         _;
     }
 
     modifier notComplete(uint256 id) {
         if (campaigns[id].complete == true) {
-            revert("Campaign is complete");
+            revert CampaignIsInactive();
         } else if (campaigns[id].timeGoal <= block.timestamp) {
             campaigns[id].complete = true;
-            revert("Campaign is complete");
+            revert CampaignIsInactive();
         }
         _;
     }
@@ -74,27 +80,19 @@ contract Donation is Ownable {
 
     modifier complete(uint256 id) {
         if (campaigns[id].complete == false) {
-            revert("Campaign is still active");
+            revert ActiveCampaign();
         }
         _;
     }
 
-    /// @notice Checks if a string is an empty string
-    /// @dev Returns true if we pass in an empty string as an argument, otherwise returns false
-    /// @param _string The string we want to check is not empty
-    /// @return isEmpty as a boolean
-    function isEmptyString(string calldata _string) internal pure returns (bool isEmpty) {
-        return keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""));
-    }
-
     /// @notice Creates a new donation campaign
     /// @dev It will set all values for the Campaign struct, and increment the counter for the next campaign
-    /// @param _name The string we want to check is not empty
-    /// @param _description The string we want to check is not empty
-    /// @param _timeGoal The string we want to check is not empty
-    /// @param _moneyGoal The string we want to check is not empty
+    /// @param _title Title of the campaign
+    /// @param _description Description of the campaign
+    /// @param _timeGoal The timestamp for the campaign deadline
+    /// @param _moneyGoal The amount of money the campaign is trying to raise
     function newCampaign(
-        string calldata _name,
+        string calldata _title,
         string calldata _description,
         uint256 _timeGoal,
         uint256 _moneyGoal
@@ -102,18 +100,18 @@ contract Donation is Ownable {
         public
         onlyOwner
         checkTime(_timeGoal)
-        noEmptyStrings(_name)
+        noEmptyStrings(_title)
         noEmptyStrings(_description)
         validateFunds(_moneyGoal)
     {
-        campaigns[campaignId.current()] = Campaign(_name, _description, _timeGoal, _moneyGoal, true, false);
+        campaigns[campaignId.current()] = Campaign(_title, _description, _timeGoal, _moneyGoal, true, false);
         campaignId.increment();
-        emit NewCampaign(_name, _description, _timeGoal, _moneyGoal);
+        emit NewCampaign(_title, _description, _timeGoal, _moneyGoal);
     }
 
     /// @notice Donate money to a campaign
     /// @dev The campaign must exist, and the donator must send at least 1 wei
-    /// @param id The id of the campaign we want to donate eth to
+    /// @param id The id of the campaign to donate eth to
     function donate(uint256 id) public payable registered(id) notComplete(id) withFunds {
         Campaign storage campaign = campaigns[id];
         campaignBalances[id] += msg.value;
@@ -126,7 +124,7 @@ contract Donation is Ownable {
 
     /// @notice Withdraw money from a campaign that is complete
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
-    /// @param id The id of the campaign we want to donate eth to
+    /// @param id The id of the campaign we want to withdraw from
     function withdraw(uint256 id) public onlyOwner registered(id) timeOrGoalAchieved(id) complete(id) {
         uint256 balance = campaignBalances[id];
 

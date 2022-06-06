@@ -9,7 +9,6 @@ describe("Unit tests", async () => {
   const currentTimestamp: number = Math.round(new Date().getTime() / 1000);
 
   const deadline: number = currentTimestamp + 2 * dayInSeconds; //campaign lasts 2 days from now
-
   // ---------------
   it("Should create campaign", async function () {
     const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
@@ -42,18 +41,18 @@ describe("Unit tests", async () => {
 
     await expect(
       Donation.newCampaign("", "Description for save the planet", deadline, BigInt(100 * 10 ** 18)),
-    ).to.be.revertedWith("No empty strings");
+    ).to.be.revertedWith("NoEmptyStrings");
     await expect(Donation.newCampaign("Some string", "", deadline, BigInt(100 * 10 ** 18))).to.be.revertedWith(
-      "No empty strings",
+      "NoEmptyStrings",
     );
-    await expect(Donation.newCampaign("", "", deadline, BigInt(100 * 10 ** 18))).to.be.revertedWith("No empty strings");
+    await expect(Donation.newCampaign("", "", deadline, BigInt(100 * 10 ** 18))).to.be.revertedWith("NoEmptyStrings");
   });
 
   // ---------------
   it("should revert 0 moneyGoal", async function () {
     const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
 
-    await expect(Donation.newCampaign("Test", "Test", deadline, 0)).to.be.revertedWith("Insufficient amount");
+    await expect(Donation.newCampaign("Test", "Test", deadline, 0)).to.be.revertedWith("InsufficientAmount");
   });
 
   // ---------------
@@ -71,8 +70,8 @@ describe("Unit tests", async () => {
     const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
     await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, BigInt(100 * 10 ** 18));
 
-    await expect(Donation.donate(0)).to.be.revertedWith("Insuficcient amount");
-    await expect(Donation.donate(0, { value: 0 })).to.be.revertedWith("Insuficcient amount");
+    await expect(Donation.donate(0)).to.be.revertedWith("InsufficientAmount");
+    await expect(Donation.donate(0, { value: 0 })).to.be.revertedWith("InsufficientAmount");
   });
 
   // ---------------
@@ -85,7 +84,7 @@ describe("Unit tests", async () => {
         currentTimestamp - 1, // timestamp in the past
         1,
       ),
-    ).to.be.revertedWith("Invalid time goal");
+    ).to.be.revertedWith("InvalidTimeGoal");
   });
 
   // ---------------
@@ -94,7 +93,7 @@ describe("Unit tests", async () => {
     await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2);
 
     await Donation.donate(3, { value: 1 });
-    await expect(Donation.withdraw(3)).to.be.revertedWith("Campaign is still active");
+    await expect(Donation.withdraw(3)).to.be.revertedWith("ActiveCampaign");
   });
 
   // ---------------
@@ -105,14 +104,40 @@ describe("Unit tests", async () => {
   });
 
   // ---------------
+  it("should revert donations to non-existant campaigns", async function () {
+    const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
+    await expect(Donation.donate(5678, { value: 2 })).to.be.revertedWith("NonExistantCampaign");
+  });
+
+  // ---------------
+  it("should revert wthdrawls from non-existant campaigns", async function () {
+    const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
+    await expect(Donation.withdraw(5678)).to.be.revertedWith("NonExistantCampaign");
+  });
+
+  // ---------------
+  it("should revert donations when msg.value is 0", async function () {
+    const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
+    await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2000);
+    await expect(Donation.donate(4)).to.be.revertedWith("InsufficientAmount");
+  });
+
+  // ---------------
   it("should withdraw from campaign where only timeGoal is reached", async function () {
     const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
     await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2000);
 
-    await Donation.donate(4, { value: 1 }); // making to have some funds
-    await expect(Donation.withdraw(4)).to.be.revertedWith("Campaign is still active");
+    await Donation.donate(5, { value: 1 }); // making to have some funds
+    await expect(Donation.withdraw(5)).to.be.revertedWith("ActiveCampaign");
 
     await ethers.provider.send("evm_setNextBlockTimestamp", [deadline + 20]); // setting SC timestamp to be 20s after the campaign deadline
-    await expect(Donation.withdraw(4)).to.emit(Donation, "FundsWithdrawn").withArgs(4, 1);
+    await expect(Donation.withdraw(5)).to.emit(Donation, "FundsWithdrawn").withArgs(5, 1);
   });
+
+  /* // ---------------   DOES NOT WORK
+  it("should revert withdrawl from wallets that are not the owners", async function () {
+    const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
+    const [, Alice] = await ethers.getSigners();
+    await expect(Donation.connect(Alice).withdraw(1)).to.be.reverted; //not sure what the error mesasage is.
+  }); */
 });
