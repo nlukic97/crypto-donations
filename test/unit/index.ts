@@ -7,8 +7,8 @@ import { ethers } from "hardhat";
 describe("Unit tests", async () => {
   const dayInSeconds: number = 86400; //a day in seconds
   const currentTimestamp: number = Math.round(new Date().getTime() / 1000);
-
   const deadline: number = currentTimestamp + 2 * dayInSeconds; //campaign lasts 2 days from now
+
   // ---------------
   it("Should create campaign", async function () {
     const { Donation } = await loadFixture(unitDonationFixture); // loading the fixture here
