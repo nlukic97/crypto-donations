@@ -19,7 +19,6 @@ contract Donation is Ownable {
         uint256 timeGoal;
         uint256 moneyGoal;
         bool registered;
-        bool active;
         bool complete;
     }
 
@@ -28,6 +27,7 @@ contract Donation is Ownable {
 
     event NewCampaign(string _name, string _description, uint256 _timeGoal, uint256 _moneyGoal);
     event NewDonation(uint256 _campaignId, uint256 _amount);
+    event FundsWithdrawn(uint256 id, uint256 amount);
 
     modifier noEmptyStrings(string calldata _string) {
         if (isEmptyString(_string)) revert("No empty strings");
@@ -36,7 +36,7 @@ contract Donation is Ownable {
 
     modifier checkTime(uint256 _timeGoal) {
         // must be 24 hours at the very least. But block.timestamp is not accurate
-        if (_timeGoal < block.timestamp + 86400) revert("Invalid time goal.");
+        if (_timeGoal > block.timestamp == false) revert("Invalid time goal");
         _;
     }
 
@@ -50,13 +50,32 @@ contract Donation is Ownable {
         _;
     }
 
-    modifier active(uint256 id) {
-        if (campaigns[id].active == false) revert("Innactive campaign");
+    modifier withFunds() {
+        if (msg.value <= 0) revert("Insuficcient amount");
         _;
     }
 
-    modifier withFunds() {
-        if (msg.value <= 0) revert("Insuficcient amount");
+    modifier notComplete(uint256 id) {
+        if (campaigns[id].complete == true) {
+            revert("Campaign is complete");
+        } else if (campaigns[id].timeGoal <= block.timestamp) {
+            campaigns[id].complete = true;
+            revert("Campaign is complete");
+        }
+        _;
+    }
+
+    modifier timeOrGoalAchieved(uint256 id) {
+        if (campaignBalances[id] >= campaigns[id].moneyGoal || campaigns[id].timeGoal <= block.timestamp) {
+            campaigns[id].complete = true;
+        }
+        _;
+    }
+
+    modifier complete(uint256 id) {
+        if (campaigns[id].complete == false) {
+            revert("Campaign is still active");
+        }
         _;
     }
 
@@ -87,37 +106,34 @@ contract Donation is Ownable {
         noEmptyStrings(_description)
         validateFunds(_moneyGoal)
     {
-        campaigns[campaignId.current()] = Campaign(_name, _description, _timeGoal, _moneyGoal, true, true, false);
-
+        campaigns[campaignId.current()] = Campaign(_name, _description, _timeGoal, _moneyGoal, true, false);
         campaignId.increment();
         emit NewCampaign(_name, _description, _timeGoal, _moneyGoal);
-    }
-
-    // for testing purposes only
-    function getTimestamp() public view returns (uint256) {
-        return block.timestamp;
     }
 
     /// @notice Donate money to a campaign
     /// @dev The campaign must exist, and the donator must send at least 1 wei
     /// @param id The id of the campaign we want to donate eth to
-    function donate(uint256 id) public payable registered(id) active(id) withFunds {
+    function donate(uint256 id) public payable registered(id) notComplete(id) withFunds {
         Campaign storage campaign = campaigns[id];
-        if (campaign.moneyGoal >= campaignBalances[id]) {
+        campaignBalances[id] += msg.value;
+
+        if (campaignBalances[id] >= campaign.moneyGoal || campaign.timeGoal <= block.timestamp) {
             campaign.complete = true;
         }
-
-        campaignBalances[id] += msg.value;
         emit NewDonation(id, msg.value);
     }
 
-    /* function withdraw(uint256 id) public onlyOwner {
-        Campaign storage campaign = campaigns[id];
-        uint256 storage balance = campaignBalances[i];
+    /// @notice Withdraw money from a campaign that is complete
+    /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
+    /// @param id The id of the campaign we want to donate eth to
+    function withdraw(uint256 id) public onlyOwner registered(id) timeOrGoalAchieved(id) complete(id) {
+        uint256 balance = campaignBalances[id];
 
-        if (campaign.active == false && balance > 0) {
-            // withdraw funds to the msg.sender;
-            // not 100% sure on the terms yet
-        }
-    } */
+        campaignBalances[id] = 0;
+
+        (bool sent, ) = owner().call{ value: balance }("");
+        if (sent == false) revert("Unable to withdraw funds");
+        emit FundsWithdrawn(id, balance);
+    }
 }
