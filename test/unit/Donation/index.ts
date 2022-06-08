@@ -4,7 +4,7 @@ import { Contract, ContractFactory, ContractTransaction, utils } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "ethers/lib/utils";
 
-describe("Donation contract", function () {
+describe("Unit tests", function () {
   let DonationFactory: ContractFactory;
   let Donation: Contract;
   let owner: SignerWithAddress;
@@ -18,7 +18,7 @@ describe("Donation contract", function () {
     Donation = await DonationFactory.connect(owner).deploy();
   });
 
-  describe("Unit tests", async () => {
+  describe("Donation contract", async () => {
     it("Should assign the contract deployer to be the owner of the address", async function () {
       expect(await Donation.owner()).to.be.equal(owner.address);
     });
@@ -26,7 +26,6 @@ describe("Donation contract", function () {
     const currentTimestamp: number = Math.round(new Date().getTime() / 1000);
     const deadline: number = currentTimestamp + 2 * dayInSeconds; //campaign lasts 2 days from now
 
-    // ---------------
     it("Should create campaign", async function () {
       await ethers.provider.send("evm_setNextBlockTimestamp", [currentTimestamp]); // setting SC timestamp to accurate one
       expect((await Donation.campaigns(0)).registered).to.equal(false);
@@ -35,71 +34,72 @@ describe("Donation contract", function () {
         "Save the planet",
         "Description for save the planet",
         deadline,
-        BigInt(100 * 10 ** 18),
+        ethers.utils.parseEther("100"),
       );
       const campaign1 = await Donation.campaigns(0);
 
       expect(tx)
         .to.emit(Donation, "NewCampaign")
-        .withArgs("Save the planet", "Description for save the planet", deadline, BigInt(100 * 10 ** 18));
+        .withArgs("Save the planet", "Description for save the planet", deadline, ethers.utils.parseEther("100"));
       expect(campaign1.name).to.be.equal("Save the planet");
       expect(campaign1.description).to.be.equal("Description for save the planet");
       expect(campaign1.timeGoal).to.be.equal(deadline).and.to.be.above(currentTimestamp);
-      expect(campaign1.moneyGoal).to.be.equal(BigInt(100 * 10 ** 18));
+      expect(campaign1.moneyGoal).to.be.equal(ethers.utils.parseEther("100"));
       expect(campaign1.registered).to.equal(true);
       expect(campaign1.complete).to.equal(false);
     });
 
-    // ---------------
     it("Should revert empty strings", async function () {
       await expect(
-        Donation.newCampaign("", "Description for save the planet", deadline, BigInt(100 * 10 ** 18)),
+        Donation.newCampaign("", "Description for save the planet", deadline, ethers.utils.parseEther("100")),
       ).to.be.revertedWith("NoEmptyStrings");
-      await expect(Donation.newCampaign("Some string", "", deadline, BigInt(100 * 10 ** 18))).to.be.revertedWith(
+      await expect(
+        Donation.newCampaign("Some string", "", deadline, ethers.utils.parseEther("100")),
+      ).to.be.revertedWith("NoEmptyStrings");
+      await expect(Donation.newCampaign("", "", deadline, ethers.utils.parseEther("100"))).to.be.revertedWith(
         "NoEmptyStrings",
       );
-      await expect(Donation.newCampaign("", "", deadline, BigInt(100 * 10 ** 18))).to.be.revertedWith("NoEmptyStrings");
     });
 
-    // ---------------
     it("should revert 0 moneyGoal", async function () {
       await expect(Donation.newCampaign("Test", "Test", deadline, 0)).to.be.revertedWith("InsufficientAmount");
     });
 
-    // ---------------
     it("should accept donation", async function () {
       await Donation.newCampaign(
         "Save the planet",
         "Description for save the planet",
         deadline,
-        BigInt(100 * 10 ** 18),
+        ethers.utils.parseEther("100"),
       );
 
+      expect(await Donation._donated(alice.address)).to.equal(false);
       await expect(Donation.connect(alice).donate(0, { value: 1 }))
         .to.emit(Donation, "NewDonation")
         .withArgs(0, 1);
+      expect(await Donation._donated(alice.address)).to.equal(true);
 
+      expect(await Donation._donated(bob.address)).to.equal(false);
       await expect(Donation.connect(bob).donate(0, { value: 3 }))
         .to.emit(Donation, "NewDonation")
         .withArgs(0, 3);
+      expect(await Donation._donated(bob.address)).to.equal(true);
 
       expect(await Donation.campaignBalances(0)).to.equal(4);
     });
 
-    // ---------------
     it("should revert donation with no funds", async function () {
       await Donation.newCampaign(
         "Save the planet",
         "Description for save the planet",
         deadline,
-        BigInt(100 * 10 ** 18),
+        ethers.utils.parseEther("100"),
       );
 
       await expect(Donation.connect(alice).donate(0)).to.be.revertedWith("InsufficientAmount");
       await expect(Donation.connect(alice).donate(0, { value: 0 })).to.be.revertedWith("InsufficientAmount");
     });
 
-    // ---------------
     it("Should revert campaign if timeGoal than is in the past", async function () {
       await expect(
         Donation.newCampaign(
@@ -111,7 +111,6 @@ describe("Donation contract", function () {
       ).to.be.revertedWith("InvalidTimeGoal");
     });
 
-    // ---------------
     it("Should revert campaign if moneyGoal is not 1 or above", async function () {
       await expect(
         Donation.newCampaign(
@@ -134,35 +133,41 @@ describe("Donation contract", function () {
         .withArgs("title", "description", deadline, 1);
     });
 
-    // ---------------
     it("should revert withdrawl from incomplete campaign", async function () {
       await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2);
       await Donation.connect(alice).connect(alice).donate(0, { value: 1 });
       await expect(Donation.withdraw(0)).to.be.revertedWith("ActiveCampaign");
     });
 
-    // ---------------
     it("should revert donations to non-existant campaigns", async function () {
       await expect(Donation.connect(alice).donate(5678, { value: 2 })).to.be.revertedWith("NonExistantCampaign");
     });
 
-    // ---------------
     it("should revert wthdrawls from non-existant campaigns", async function () {
       await expect(Donation.withdraw(5678)).to.be.revertedWith("NonExistantCampaign");
     });
 
-    // ---------------
     it("should revert donations when msg.value is 0", async function () {
       await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2000);
       await expect(Donation.connect(alice).donate(0)).to.be.revertedWith("InsufficientAmount");
     });
 
     it("should revert withdrawl from wallets that are not the owners", async function () {
-      // did not create a campaign here since the first modifier is 'isOwner'
+      await Donation.newCampaign("Save the planet", "Description for save the planet", deadline, 2000);
+      await Donation.connect(alice).donate(0, { value: 1 });
       await expect(Donation.connect(alice).withdraw(1)).to.be.reverted;
     });
 
-    // ---------------
+    it("should return excess Eth to user who sent more than necessary to complete campaign", async function () {
+      await Donation.newCampaign("Title", "Description", deadline, ethers.utils.parseEther("100")); // goal is 100 eth
+      const initialBalance = alice.getBalance();
+      await Donation.connect(alice).donate(0, { value: ethers.utils.parseEther("1000") }); // payee pays 1000 eth, 100eth should be taken and 900ethshould be returned
+
+      const currentBalance = await alice.getBalance();
+      const diff = currentBalance.sub(await initialBalance);
+      expect(parseInt(ethers.utils.formatEther(diff))).to.equal(-100); // ... making a difference in balance of around -100 eth after
+    });
+
     it("should withdraw from campaign where only money goal is reached", async function () {
       await Donation.newCampaign(
         "Save the planet",
@@ -181,7 +186,6 @@ describe("Donation contract", function () {
       expect(diff).to.equal(1000);
     });
 
-    // ---------------
     it("should withdraw from campaign where only timeGoal is reached", async function () {
       await Donation.newCampaign(
         "Save the planet",

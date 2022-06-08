@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-describe("NftReward contract", function () {
+describe("Unit tests", function () {
   let NftFactory: ContractFactory;
   let Nft: Contract;
   let owner: SignerWithAddress;
@@ -13,12 +13,13 @@ describe("NftReward contract", function () {
 
   beforeEach(async function () {
     [owner, alice, bob] = await ethers.getSigners();
+
     NftFactory = await ethers.getContractFactory("NftReward");
 
     Nft = await NftFactory.connect(owner).deploy();
   });
 
-  describe("Unit tests", async () => {
+  describe("NftReward contract", async () => {
     it("should display token metadata", async function () {
       expect(await Nft.name()).to.equal("Thanks4Donating");
       expect(await Nft.symbol()).to.equal("TNX4D");

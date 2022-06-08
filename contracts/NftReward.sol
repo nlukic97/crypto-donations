@@ -27,11 +27,12 @@ contract NftReward is ERC721URIStorage, Ownable {
         returns (uint256)
     {
         uint256 newItemId = _tokenIds.current();
+        _minted[_address] = true;
+
         _mint(_address, newItemId);
         _setTokenURI(newItemId, tokenURI);
 
         _tokenIds.increment();
-        _minted[_address] = true;
         return newItemId;
     }
 }
