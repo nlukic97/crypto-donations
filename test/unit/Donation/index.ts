@@ -24,9 +24,11 @@ describe("Unit tests", function () {
     ethers.utils.parseEther("100"),
   ];
 
-  beforeEach(async function () {
+  before(async function () {
     [owner, alice, bob] = await ethers.getSigners();
+  });
 
+  beforeEach(async function () {
     NftFactory = await ethers.getContractFactory("NftReward");
     Nft = await NftFactory.connect(owner).deploy();
 

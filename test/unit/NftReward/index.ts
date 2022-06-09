@@ -14,11 +14,7 @@ import { shouldRevertMultipleMinting } from "./NftReward/NftRewardShouldRevertMu
 
 describe("Unit tests", function () {
   before(async function () {
-    const signers = await ethers.getSigners();
-    this.owner = signers[0];
-    this.alice = signers[1];
-    this.bob = signers[2];
-
+    [this.owner, this.alice, this.bob] = await ethers.getSigners();
     this.urlPlaceholder = "https://example.com/thanks";
   });
 
