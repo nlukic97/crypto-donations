@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-/* interface NftReward {
+interface NftInterface {
     function awardItem(address _address, string memory tokenURI) external returns (uint256);
-} */
+}
 
 /// @title Contract for making donation campaigns that accept ether
 /// @author Nikola Lukic
@@ -27,17 +27,17 @@ contract Donation is Ownable, ReentrancyGuard {
         bool complete;
     }
 
-    /* address public nftAddress; */
+    address public nftAddress;
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
     mapping(address => bool) public _donated;
 
-    /* event NftAddressUpdated(address _address); */
+    event NftAddressUpdated(address _address);
     event NewCampaign(string _title, string _description, uint256 _timeGoal, uint256 _moneyGoal);
     event NewDonation(uint256 _campaignId, uint256 _amount);
     event FundsWithdrawn(uint256 id, uint256 amount);
 
-    /* error InvalidAddress(); */
+    error InvalidAddress();
     error NoEmptyStrings();
     error InvalidTimeGoal();
     error InsufficientAmount();
@@ -45,10 +45,10 @@ contract Donation is Ownable, ReentrancyGuard {
     error NonExistantCampaign();
     error ActiveCampaign();
 
-    /* modifier validAddress(address _address) {
+    modifier validAddress(address _address) {
         if (_address == address(0)) revert InvalidAddress();
         _;
-    } */
+    }
 
     modifier noEmptyStrings(string calldata _string) {
         if (keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""))) revert NoEmptyStrings();
@@ -133,10 +133,7 @@ contract Donation is Ownable, ReentrancyGuard {
 
         if (_donated[msg.sender] == false) {
             _donated[msg.sender] = true;
-            /**
-            // Still testing this, not sure how to implement a typescript interface 
-            NftReward(nftAddress).awardItem(msg.sender, "some random uri"); 
-            */
+            NftInterface(nftAddress).awardItem(msg.sender, "some random uri");
         }
 
         if (campaignBalances[id] >= campaign.moneyGoal || campaign.timeGoal <= block.timestamp) {
@@ -167,8 +164,8 @@ contract Donation is Ownable, ReentrancyGuard {
         emit FundsWithdrawn(id, balance);
     }
 
-    /* function setNftAddress(address _address) external onlyOwner validAddress(_address) {
+    function setNftAddress(address _address) external onlyOwner validAddress(_address) {
         nftAddress = _address;
         emit NftAddressUpdated(_address);
-    } */
+    }
 }

@@ -13,13 +13,28 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  // We get the contract to deploy
-  const Donation = await ethers.getContractFactory("Donation");
-  const donation = await Donation.deploy();
+  // We get the contract's to deploy
 
-  await donation.deployed();
+  // contract 1
+  const DonationFactory = await ethers.getContractFactory("Donation");
+  const Donation = await DonationFactory.deploy();
 
-  console.log("Greeter deployed to:", donation.address);
+  await Donation.deployed();
+  console.log("Donation deployed to:", Donation.address);
+
+  // contract 2
+  const NftFactory = await ethers.getContractFactory("NftReward");
+  const Nft = await NftFactory.deploy();
+
+  await Nft.deployed();
+  console.log("NftReward deployed to:", Nft.address);
+
+  // Setting up contract variables
+  await Donation.setNftAddress(Nft.address);
+  console.log("NftAddress variable on Donation contract updated to: ", Nft.address);
+
+  await Nft.transferOwnership(Donation.address);
+  console.log("owner variable on NftReward contract updated to: ", Donation.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
