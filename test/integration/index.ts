@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers, waffle } from "hardhat";
+import { ethers } from "hardhat";
 import { Contract, ContractFactory } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
@@ -35,10 +35,8 @@ describe("Integration tests", async function () {
   describe("NftReward", async function () {
     it("should mint nft upon donating to a campaign for the first time", async function () {
       await Donation.newCampaign(...campaignArgs);
-      // console.log(await waffle.provider.getBalance(Donation.address)); // 0 eth
 
       await Donation.connect(alice).donate(0, { value: 1 });
-      // console.log(await waffle.provider.getBalance(Donation.address)); // donated 1 wei, and the contract still has 1 wei
 
       expect(await Nft.balanceOf(alice.address)).to.equal(1);
     });
