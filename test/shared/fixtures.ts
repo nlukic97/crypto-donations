@@ -10,7 +10,7 @@ type NftFixtureType = {
 export const NftFixture: Fixture<NftFixtureType> = async (signers: Wallet[]) => {
   const deployer: Wallet = signers[0];
 
-  const NftFactory: ContractFactory = await ethers.getContractFactory(`Lending`);
+  const NftFactory: ContractFactory = await ethers.getContractFactory(`NftReward`);
 
   const NftFixture: NftReward = (await NftFactory.connect(deployer).deploy()) as NftReward;
 
