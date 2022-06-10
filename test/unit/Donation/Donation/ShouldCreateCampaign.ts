@@ -3,7 +3,6 @@ import { ethers } from "hardhat";
 
 export const shouldCreateCampaign = (): void => {
   it("Should create campaign", async function () {
-    await ethers.provider.send("evm_setNextBlockTimestamp", [this.currentTimestamp]); // setting SC timestamp to accurate one
     expect((await this.Donation.campaigns(0)).registered).to.equal(false);
 
     await expect(this.Donation.newCampaign(...this.campaignArgs))

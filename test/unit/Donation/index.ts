@@ -23,6 +23,9 @@ describe("Unit tests", function () {
 
     this.campaignArgs = ["title", "description", this.deadline, ethers.utils.parseEther("100")];
     this.urlPlaceholder = "https://example.com/thanks";
+
+    // setting SC timestamp to accurate one
+    await ethers.provider.send("evm_setNextBlockTimestamp", [this.currentTimestamp]);
   });
 
   beforeEach(async function () {

@@ -14,6 +14,6 @@ export const shouldRevertWithdraw = (): void => {
   it("should revert withdrawl from wallets that are not the owners", async function () {
     await this.Donation.newCampaign(...this.campaignArgs);
     await this.Donation.connect(this.alice).donate(0, { value: 1 });
-    await expect(this.Donation.connect(this.alice).withdraw(1)).to.be.reverted;
+    await expect(this.Donation.connect(this.alice).withdraw(1)).to.be.revertedWith("Ownable: caller is not the owner");
   });
 };
