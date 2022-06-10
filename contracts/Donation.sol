@@ -44,23 +44,13 @@ contract Donation is Ownable, ReentrancyGuard {
     error NonExistantCampaign();
     error ActiveCampaign();
 
-    modifier validAddress(address _address) {
-        if (_address == address(0)) revert InvalidAddress();
-        _;
-    }
-
-    modifier noEmptyStrings(string calldata _string) {
+    modifier notEmptyString(string calldata _string) {
         if (keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""))) revert NoEmptyStrings();
         _;
     }
 
     modifier checkTime(uint256 _timeGoal) {
         if (_timeGoal > block.timestamp == false) revert InvalidTimeGoal();
-        _;
-    }
-
-    modifier validateFunds(uint256 amount) {
-        if (amount < 1) revert InsufficientAmount();
         _;
     }
 
@@ -74,26 +64,12 @@ contract Donation is Ownable, ReentrancyGuard {
         _;
     }
 
-    modifier notComplete(uint256 id) {
+    modifier activeCampaign(uint256 id) {
         if (campaigns[id].complete == true) {
             revert CampaignIsInactive();
         } else if (campaigns[id].timeGoal <= block.timestamp) {
             campaigns[id].complete = true;
             revert CampaignIsInactive();
-        }
-        _;
-    }
-
-    modifier timeOrGoalAchieved(uint256 id) {
-        if (campaignBalances[id] >= campaigns[id].moneyGoal || campaigns[id].timeGoal <= block.timestamp) {
-            campaigns[id].complete = true;
-        }
-        _;
-    }
-
-    modifier complete(uint256 id) {
-        if (campaigns[id].complete == false) {
-            revert ActiveCampaign();
         }
         _;
     }
@@ -109,14 +85,9 @@ contract Donation is Ownable, ReentrancyGuard {
         string calldata _description,
         uint256 _timeGoal,
         uint256 _moneyGoal
-    )
-        public
-        onlyOwner
-        checkTime(_timeGoal)
-        noEmptyStrings(_title)
-        noEmptyStrings(_description)
-        validateFunds(_moneyGoal)
-    {
+    ) public onlyOwner checkTime(_timeGoal) notEmptyString(_title) notEmptyString(_description) {
+        if (_moneyGoal < 1) revert InsufficientAmount();
+
         campaigns[campaignId.current()] = Campaign(_title, _description, _timeGoal, _moneyGoal, true, false);
         campaignId.increment();
         emit NewCampaign(_title, _description, _timeGoal, _moneyGoal);
@@ -126,7 +97,7 @@ contract Donation is Ownable, ReentrancyGuard {
     /// @dev The campaign must exist, and the donator must send at least 1 wei. P
     /// Payee who sent excess eth which caused the campaign to be complete will be sent back the difference.
     /// @param id The id of the campaign to donate eth to
-    function donate(uint256 id) public payable nonReentrant registered(id) notComplete(id) withFunds {
+    function donate(uint256 id) public payable nonReentrant registered(id) activeCampaign(id) withFunds {
         Campaign storage campaign = campaigns[id];
         campaignBalances[id] += msg.value;
 
@@ -153,7 +124,15 @@ contract Donation is Ownable, ReentrancyGuard {
     /// @notice Withdraw money from a campaign that is complete
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
     /// @param id The id of the campaign we want to withdraw from
-    function withdraw(uint256 id) public nonReentrant onlyOwner registered(id) timeOrGoalAchieved(id) complete(id) {
+    function withdraw(uint256 id) public nonReentrant onlyOwner registered(id) {
+        if (campaigns[id].complete == false) {
+            if (campaignBalances[id] >= campaigns[id].moneyGoal || campaigns[id].timeGoal <= block.timestamp) {
+                campaigns[id].complete = true;
+            } else {
+                revert ActiveCampaign();
+            }
+        }
+
         uint256 balance = campaignBalances[id];
 
         campaignBalances[id] = 0;
@@ -163,7 +142,8 @@ contract Donation is Ownable, ReentrancyGuard {
         emit FundsWithdrawn(id, balance);
     }
 
-    function setNftAddress(address _address) external onlyOwner validAddress(_address) {
+    function setNftAddress(address _address) external onlyOwner {
+        if (_address == address(0)) revert InvalidAddress();
         nftAddress = _address;
         emit NftAddressUpdated(_address);
     }
