@@ -2,14 +2,17 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 export const shouldCreateCampaign = (): void => {
-  it("Should create campaign", async function () {
-    expect((await this.Donation.campaigns(0)).registered).to.equal(false);
+  const campaignId = 0;
 
+  it("Should create campaign", async function () {
+    expect((await this.Donation.campaigns(campaignId)).registered).to.equal(false);
+
+    // creating campaign (which will have id of 0)
     await expect(this.Donation.newCampaign(...this.campaignArgs))
       .to.emit(this.Donation, "NewCampaign")
       .withArgs(...this.campaignArgs);
 
-    const campaign1 = await this.Donation.campaigns(0);
+    const campaign1 = await this.Donation.campaigns(campaignId);
 
     expect(campaign1.name).to.be.equal("title");
     expect(campaign1.description).to.be.equal("description");

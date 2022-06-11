@@ -1,9 +1,9 @@
 import { expect } from "chai";
 
 export const shouldRevertDonation = (): void => {
-  // when I put all these It's in a Context block, I get an invalid time goal error.
+  const nonExistantId: number = 5678;
+
   it("should revert donations to non-existant campaigns", async function () {
-    const nonExistantId: number = 5678;
     await expect(this.Donation.connect(this.alice).donate(nonExistantId, { value: 2 })).to.be.revertedWith(
       "NonExistantCampaign",
     );
