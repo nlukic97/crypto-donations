@@ -1,5 +1,5 @@
-import { ethers } from "hardhat";
-import { ContractFactory } from "ethers";
+import { ethers, waffle } from "hardhat";
+import { unitDonationFixture } from "../../shared/fixtures";
 
 // tests
 import { shouldBeCorrectOwner } from "./Donation/ShouldBeCorrectOwner";
@@ -15,28 +15,23 @@ import { shouldWithdraw } from "./Donation/ShouldWithdraw";
 
 describe("Unit tests", function () {
   before(async function () {
-    [this.owner, this.alice, this.bob] = await ethers.getSigners();
-
     this.dayInSeconds = 86400;
     this.currentTimestamp = Math.round(new Date().getTime() / 1000);
     this.deadline = this.currentTimestamp + 2 * this.dayInSeconds;
-
     this.campaignArgs = ["title", "description", this.deadline, ethers.utils.parseEther("100")];
     this.urlPlaceholder = "https://example.com/thanks";
 
+    const wallets = waffle.provider.getWallets();
+    [this.owner, this.alice, this.bob] = wallets;
+
     // setting SC timestamp to accurate one
     await ethers.provider.send("evm_setNextBlockTimestamp", [this.currentTimestamp]);
+    this.loadFixture = waffle.createFixtureLoader(wallets);
   });
 
   beforeEach(async function () {
-    const NftFactory: ContractFactory = await ethers.getContractFactory("NftReward");
-    this.Nft = await NftFactory.connect(this.owner).deploy();
-
-    const DonationFactory: ContractFactory = await ethers.getContractFactory("Donation");
-    this.Donation = await DonationFactory.connect(this.owner).deploy();
-
-    await this.Donation.setNftAddress(this.Nft.address);
-    await this.Nft.transferOwnership(this.Donation.address); // so only the Donation SC can mint new NFT's
+    const { Donation } = await this.loadFixture(unitDonationFixture);
+    this.Donation = Donation;
   });
 
   describe("Donation contract", async () => {

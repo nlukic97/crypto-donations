@@ -1,5 +1,5 @@
-import { ethers, waffle } from "hardhat";
-import { NftFixture } from "../../shared/fixtures";
+import { waffle } from "hardhat";
+import { unitNftFixture } from "../../shared/fixtures";
 
 // tests:
 import { shouldDisplayMetaData } from "./NftReward/NftRewardShouldDisplayMeta";
@@ -10,7 +10,6 @@ import { shouldMint } from "./NftReward/NftRewardShouldMint";
 import { shouldTransferNft } from "./NftReward/NftRewardShouldTransferNft";
 import { shouldRevertMint } from "./NftReward/NftRewardShouldRevertMint";
 import { shouldRevertMultipleMinting } from "./NftReward/NftRewardShouldRevertMultipleMinting";
-import { Wallet } from "ethers";
 
 describe("Unit tests", function () {
   before(async function () {
@@ -24,7 +23,7 @@ describe("Unit tests", function () {
   });
 
   beforeEach(async function () {
-    const Nft = this.loadFixture(NftFixture);
+    const { Nft } = await this.loadFixture(unitNftFixture);
     this.Nft = Nft;
   });
 
