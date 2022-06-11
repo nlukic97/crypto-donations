@@ -1,44 +1,52 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { parseEther, formatUnits } from "ethers/lib/utils";
+import { BigNumberish } from "ethers";
 
 export const shouldWithdraw = (): void => {
-  const campaignId = 0;
-  const amount1 = ethers.utils.parseEther("100");
-  const amount2 = ethers.utils.parseEther("10");
+  const campaignId: number = 0;
+
+  const title: string = "title";
+  const description: string = "description";
+  const days: number = 2;
+  const moneyGoal: BigNumberish = parseEther("100");
 
   it("should withdraw from campaign where only money goal is reached", async function () {
-    await this.Donation.newCampaign(...this.campaignArgs);
-    await this.Donation.connect(this.alice).donate(campaignId, { value: amount1 }); // making campaign with 0 complete due to achieving moneyGoal
+    await this.Donation.newCampaign(title, description, days, moneyGoal);
+    await this.Donation.connect(this.alice).donate(campaignId, { value: moneyGoal }); // making campaign with 0 complete due to achieving moneyGoal
 
-    const ownerBeforeBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
+    const beforeWithdrawalBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
 
     await expect(this.Donation.withdraw(campaignId))
       .to.emit(this.Donation, "FundsWithdrawn")
-      .withArgs(campaignId, amount1);
+      .withArgs(campaignId, moneyGoal);
 
-    const ownerAfterBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
-    const diff = ownerAfterBalance - ownerBeforeBalance;
+    const afterWithdrawalBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
+    const diff = afterWithdrawalBalance - beforeWithdrawalBalance;
     expect(diff).to.equal(100);
   });
 
   it("should withdraw from campaign where only timeGoal is reached", async function () {
-    await this.Donation.newCampaign(...this.campaignArgs);
+    const amountDonated: BigNumberish = parseEther("10");
 
-    // making to have some funds (not full goal)
-    await this.Donation.connect(this.alice).donate(campaignId, { value: amount2 });
+    // making campaign that has some funds (not full goal reached)
+    await this.Donation.newCampaign(title, description, days, moneyGoal);
+    await this.Donation.connect(this.alice).donate(campaignId, { value: amountDonated });
+
     await expect(this.Donation.withdraw(campaignId)).to.be.revertedWith("ActiveCampaign");
 
-    // setting SC timestamp to be 20s after the campaign deadline
-    await ethers.provider.send("evm_setNextBlockTimestamp", [this.deadline + 20]);
-    const ownerBeforeBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
+    // Setting time to be the timeGoal unix timestamp
+    await ethers.provider.send("evm_increaseTime", [2 * this.dayInSeconds]);
+
+    //
+    const beforeWithdrawalBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
 
     await expect(this.Donation.withdraw(campaignId))
       .to.emit(this.Donation, "FundsWithdrawn")
-      .withArgs(campaignId, amount2);
-    const ownerAfterBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
+      .withArgs(campaignId, amountDonated);
+    const afterWithdrawalBalance = parseInt(formatUnits(await this.owner.getBalance(), "ether"));
 
-    const diff = ownerAfterBalance - ownerBeforeBalance;
+    const diff = afterWithdrawalBalance - beforeWithdrawalBalance;
     expect(diff).to.equal(10);
   });
 };

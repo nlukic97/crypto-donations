@@ -5,14 +5,17 @@ export const shouldAcceptDonation = (): void => {
   const amount1: number = 1;
   const amount2: number = 3;
 
+  const campaignArgs = ["title", "description", 2, 2000];
+
   it("should accept donation", async function () {
-    await this.Donation.newCampaign(...this.campaignArgs);
+    await this.Donation.newCampaign(...campaignArgs);
 
     expect(await this.Donation._donated(this.alice.address)).to.equal(false);
 
     await expect(this.Donation.connect(this.alice).donate(campaignId, { value: amount1 }))
       .to.emit(this.Donation, "NewDonation")
       .withArgs(campaignId, amount1);
+
     expect(await this.Donation._donated(this.alice.address)).to.equal(true);
 
     expect(await this.Donation._donated(this.bob.address)).to.equal(false);

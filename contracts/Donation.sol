@@ -29,6 +29,7 @@ contract Donation is Ownable, ReentrancyGuard {
     address public nftAddress;
     string private constant NFT_URL =
         "https://gateway.pinata.cloud/ipfs/QmTJwWP2K8PEeFdD5SCNSmoMtcqPRkeqpWjegGnd6fgTPb";
+    uint32 private constant DAY_IN_SEC = 86400;
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
@@ -49,11 +50,6 @@ contract Donation is Ownable, ReentrancyGuard {
 
     modifier notEmptyString(string calldata _string) {
         if (keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""))) revert NoEmptyStrings();
-        _;
-    }
-
-    modifier checkTime(uint256 _timeGoal) {
-        if (_timeGoal > block.timestamp == false) revert InvalidTimeGoal();
         _;
     }
 
@@ -81,19 +77,29 @@ contract Donation is Ownable, ReentrancyGuard {
     /// @dev It will set all values for the Campaign struct, and increment the counter for the next campaign
     /// @param _title Title of the campaign
     /// @param _description Description of the campaign
-    /// @param _timeGoal The timestamp for the campaign deadline
+    /// @param _timeGoal The number of days the campaign should last
     /// @param _moneyGoal The amount of money the campaign is trying to raise
     function newCampaign(
         string calldata _title,
         string calldata _description,
         uint256 _timeGoal,
         uint256 _moneyGoal
-    ) public onlyOwner checkTime(_timeGoal) notEmptyString(_title) notEmptyString(_description) {
+    ) public onlyOwner notEmptyString(_title) notEmptyString(_description) {
         if (_moneyGoal < 1) revert InsufficientAmount();
+        if (_timeGoal < 1) revert InvalidTimeGoal();
 
-        campaigns[campaignId.current()] = Campaign(_title, _description, _timeGoal, _moneyGoal, true, false);
+        campaigns[campaignId.current()] = Campaign(
+            _title,
+            _description,
+            block.timestamp + _timeGoal * DAY_IN_SEC,
+            _moneyGoal,
+            true,
+            false
+        );
+
         campaignId.increment();
-        emit NewCampaign(_title, _description, _timeGoal, _moneyGoal);
+
+        emit NewCampaign(_title, _description, block.timestamp + _timeGoal * DAY_IN_SEC, _moneyGoal);
     }
 
     /// @notice Donate money to a campaign

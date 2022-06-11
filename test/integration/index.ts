@@ -8,11 +8,9 @@ import { shouldMintOnlyOnce } from "./Donation_NftReward/ShouldMintOnlyOnce";
 describe("Integration tests", async function () {
   before(async function () {
     this.dayInSeconds = 86400;
-    this.currentTimestamp = Math.round(new Date().getTime() / 1000);
-    this.deadline = this.currentTimestamp + 2 * this.dayInSeconds;
-
-    this.campaignArgs = ["title", "description", this.deadline, ethers.utils.parseEther("1000")];
-    this.urlPlaceholder = "https://example.com/thanks";
+    const days = 10;
+    const amount = 100;
+    this.campaignArgs = ["title", "description", days, amount];
 
     const wallets = waffle.provider.getWallets();
     [this.owner, this.alice, this.bob] = wallets;
