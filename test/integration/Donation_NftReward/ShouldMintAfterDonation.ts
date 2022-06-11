@@ -1,4 +1,5 @@
 import { expect } from "chai";
+import { nftURL } from "../../shared/constants";
 
 export const shouldMintAfterDonation = (): void => {
   const campaignId: number = 0;
@@ -12,5 +13,6 @@ export const shouldMintAfterDonation = (): void => {
 
     expect(await this.Nft.balanceOf(this.alice.address)).to.equal(amount);
     expect(await this.Nft.ownerOf(firstNftId)).to.equal(this.alice.address);
+    expect(await this.Nft.tokenURI(firstNftId)).to.equal(nftURL);
   });
 };

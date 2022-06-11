@@ -27,6 +27,9 @@ contract Donation is Ownable, ReentrancyGuard {
     }
 
     address public nftAddress;
+    string private constant NFT_URL =
+        "https://gateway.pinata.cloud/ipfs/QmTJwWP2K8PEeFdD5SCNSmoMtcqPRkeqpWjegGnd6fgTPb";
+
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
     mapping(address => bool) public _donated;
@@ -103,7 +106,7 @@ contract Donation is Ownable, ReentrancyGuard {
 
         if (_donated[msg.sender] == false) {
             _donated[msg.sender] = true;
-            NftInterface(nftAddress).awardItem(msg.sender, "some random uri");
+            NftInterface(nftAddress).awardItem(msg.sender, NFT_URL);
         }
 
         if (campaignBalances[id] >= campaign.moneyGoal || campaign.timeGoal <= block.timestamp) {

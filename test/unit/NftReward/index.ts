@@ -13,8 +13,6 @@ import { shouldRevertMultipleMinting } from "./NftReward/NftRewardShouldRevertMu
 
 describe("Unit tests", function () {
   before(async function () {
-    this.urlPlaceholder = "https://example.com/thanks";
-
     const wallets = waffle.provider.getWallets();
 
     [this.owner, this.alice, this.bob] = wallets;

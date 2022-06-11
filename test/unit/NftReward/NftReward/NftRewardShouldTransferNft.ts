@@ -1,10 +1,11 @@
 import { expect } from "chai";
+import { nftURL } from "../../../shared/constants";
 
 export const shouldTransferNft = (): void => {
   const nftId: number = 0;
 
   it("should transfer nft from one account to another", async function () {
-    await this.Nft.awardItem(this.alice.address, this.urlPlaceholder);
+    await this.Nft.awardItem(this.alice.address, nftURL);
 
     expect(await this.Nft.balanceOf(this.alice.address)).to.equal(1);
     expect(await this.Nft.balanceOf(this.bob.address)).to.equal(0);
