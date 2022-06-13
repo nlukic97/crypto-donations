@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface NftInterface {
     function awardItem(address _address, string memory tokenURI) external returns (uint256);
@@ -13,7 +12,7 @@ interface NftInterface {
 /// @author Nikola Lukic
 /// @notice Made as task 1 of the Solidity Bootcamp
 /// @dev All function calls are currently implemented without side effects
-contract Donation is Ownable, ReentrancyGuard {
+contract Donation is Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private campaignId;
 
@@ -106,7 +105,7 @@ contract Donation is Ownable, ReentrancyGuard {
     /// @dev The campaign must exist, and the donator must send at least 1 wei. P
     /// Payee who sent excess eth which caused the campaign to be complete will be sent back the difference.
     /// @param id The id of the campaign to donate eth to
-    function donate(uint256 id) public payable nonReentrant registered(id) activeCampaign(id) withFunds {
+    function donate(uint256 id) public payable registered(id) activeCampaign(id) withFunds {
         Campaign storage campaign = campaigns[id];
         campaignBalances[id] += msg.value;
 
@@ -133,7 +132,7 @@ contract Donation is Ownable, ReentrancyGuard {
     /// @notice Withdraw money from a campaign that is complete
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
     /// @param id The id of the campaign we want to withdraw from
-    function withdraw(uint256 id) public nonReentrant onlyOwner registered(id) {
+    function withdraw(uint256 id) public onlyOwner registered(id) {
         if (campaigns[id].complete == false) {
             if (campaignBalances[id] >= campaigns[id].moneyGoal || campaigns[id].timeGoal <= block.timestamp) {
                 campaigns[id].complete = true;

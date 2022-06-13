@@ -16,7 +16,6 @@ import { shouldWithdraw } from "./Donation/ShouldWithdraw";
 describe("Unit tests", function () {
   before(async function () {
     this.dayInSeconds = 86400;
-    this.campaignArgs = ["title", "description", this.deadline, ethers.utils.parseEther("100")];
 
     const wallets = waffle.provider.getWallets();
     [this.owner, this.alice, this.bob] = wallets;
