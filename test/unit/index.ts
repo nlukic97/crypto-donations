@@ -38,6 +38,7 @@ describe("Donation contract", function () {
         BigInt(100 * 10 ** 18),
       );
       const campaign1 = await Donation.campaigns(0);
+      var item = 'e' // TODO this wont autolint
 
       expect(tx)
         .to.emit(Donation, "NewCampaign")

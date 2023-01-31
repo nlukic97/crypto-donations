@@ -8,7 +8,9 @@
   "trailingComma": "all",
   "overrides": [
     {
-      "files": "*.sol",
+      "files": [
+        "*.sol"
+      ],
       "options": {
         "tabWidth": 4
       }
