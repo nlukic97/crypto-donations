@@ -1,4 +1,4 @@
-import { expect, util } from "chai";
+import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Contract, ContractFactory, ContractTransaction, utils } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -22,9 +22,9 @@ describe("Donation contract", function () {
     it("Should assign the contract deployer to be the owner of the address", async function () {
       expect(await Donation.owner()).to.be.equal(owner.address);
     });
-    const dayInSeconds: number = 86400; //a day in seconds
-    const currentTimestamp: number = Math.round(new Date().getTime() / 1000);
-    const deadline: number = currentTimestamp + 2 * dayInSeconds; //campaign lasts 2 days from now
+    const dayInSeconds: number = 86400; // a day in seconds
+    const currentTimestamp: number = Math.round(new Date().getTime() / 1000) + 2; // TODO why do I have to add 2 seconds to this
+    const deadline: number = currentTimestamp + 2 * dayInSeconds; // campaign lasts 2 days from now
 
     // ---------------
     it("Should create campaign", async function () {

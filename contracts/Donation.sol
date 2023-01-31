@@ -1,7 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
@@ -79,9 +78,7 @@ contract Donation is Ownable {
     }
 
     modifier complete(uint256 id) {
-        if (campaigns[id].complete == false) {
-            revert ActiveCampaign();
-        }
+        if (campaigns[id].complete == false) revert ActiveCampaign();
         _;
     }
 
