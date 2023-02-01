@@ -4,6 +4,10 @@ import { Contract, ContractFactory, ContractTransaction, utils } from "ethers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "ethers/lib/utils";
 
+const dayInSeconds = 86400; // a day in seconds
+const currentTimestamp: number = Math.round(new Date().getTime() / 1000) + 2; // TODO why do I have to add 2 seconds to this
+const deadline: number = currentTimestamp + 2 * dayInSeconds; // campaign lasts 2 days from now
+
 describe("Donation contract", function () {
   let DonationFactory: ContractFactory;
   let Donation: Contract;
@@ -14,7 +18,6 @@ describe("Donation contract", function () {
   beforeEach(async function () {
     [owner, alice, bob] = await ethers.getSigners();
     DonationFactory = await ethers.getContractFactory("Donation");
-
     Donation = await DonationFactory.connect(owner).deploy();
   });
 
@@ -22,9 +25,6 @@ describe("Donation contract", function () {
     it("Should assign the contract deployer to be the owner of the address", async function () {
       expect(await Donation.owner()).to.be.equal(owner.address);
     });
-    const dayInSeconds: number = 86400; // a day in seconds
-    const currentTimestamp: number = Math.round(new Date().getTime() / 1000) + 2; // TODO why do I have to add 2 seconds to this
-    const deadline: number = currentTimestamp + 2 * dayInSeconds; // campaign lasts 2 days from now
 
     // ---------------
     it("Should create campaign", async function () {
@@ -38,7 +38,6 @@ describe("Donation contract", function () {
         BigInt(100 * 10 ** 18),
       );
       const campaign1 = await Donation.campaigns(0);
-      var item = 'e' // TODO this wont autolint
 
       expect(tx)
         .to.emit(Donation, "NewCampaign")
