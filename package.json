@@ -42,5 +42,12 @@
   "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "^4.6.0"
+  },
+  "scripts": {
+    "clean": "npx hardhat clean",
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "typechain": "npx hardhat typechain",
+    "all": "npm run clean && npm run compile && npm run test"
   }
 }
