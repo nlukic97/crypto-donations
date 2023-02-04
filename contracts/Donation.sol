@@ -4,10 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-/// @title Contract for making donation campaigns that accept ether
+/// @title Contract for making donation campaigns that accept eth
 /// @author Nikola Lukic
-/// @notice Made as task 1 of the Solidity Bootcamp
-/// @dev All function calls are currently implemented without side effects
+/// @notice Made as a task of the Solidity Bootcamp
 contract Donation is Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private campaignId;
@@ -23,20 +22,22 @@ contract Donation is Ownable {
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
+    mapping(uint256 => bool) public campaingLocked;
 
-    event NewCampaign(string _title, string _description, uint256 _timeGoal, uint256 _moneyGoal);
-    event NewDonation(uint256 _campaignId, uint256 _amount);
     event FundsWithdrawn(uint256 id, uint256 amount);
+    event NewDonation(uint256 _campaignId, uint256 _amount);
+    event NewCampaign(string _title, string _description, uint256 _timeGoal, uint256 _moneyGoal);
 
+    error ActiveCampaign();
     error NoEmptyStrings();
     error InvalidTimeGoal();
+    error campaignLocked();
     error InsufficientAmount();
     error CampaignIsInactive();
     error NonExistantCampaign();
-    error ActiveCampaign();
 
     modifier noEmptyStrings(string calldata _string) {
-        if (keccak256(abi.encodePacked(_string)) == keccak256(abi.encodePacked(""))) revert NoEmptyStrings();
+        if (bytes(_string).length <= 0) revert NoEmptyStrings();
         _;
     }
 
@@ -45,8 +46,13 @@ contract Donation is Ownable {
         _;
     }
 
+    modifier campaignNotLocked(uint256 id) {
+        if (campaingLocked[id]) revert campaignLocked();
+        _;
+    }
+
     /// @notice Creates a new donation campaign
-    /// @dev It will set all values for the Campaign struct, and increment the counter for the next campaign
+    /// @dev It will set all values for the Campaign struct within the campaigns mapping, and increment the counter for the next campaign
     /// @param _title Title of the campaign
     /// @param _description Description of the campaign
     /// @param _deadlineInDays The number of days for the campaign deadline
@@ -56,7 +62,7 @@ contract Donation is Ownable {
         string calldata _description,
         uint256 _deadlineInDays,
         uint256 _moneyGoal
-    ) public onlyOwner noEmptyStrings(_title) noEmptyStrings(_description) {
+    ) external onlyOwner noEmptyStrings(_title) noEmptyStrings(_description) {
         if (_deadlineInDays <= 0) revert InvalidTimeGoal();
         if (_moneyGoal < 1) revert InsufficientAmount();
 
@@ -77,7 +83,7 @@ contract Donation is Ownable {
     /// @notice Donate money to a campaign
     /// @dev The campaign must exist, and the donator must send at least 1 wei
     /// @param id The id of the campaign to donate eth to
-    function donate(uint256 id) public payable registered(id) {
+    function donate(uint256 id) external payable campaignNotLocked(id) registered(id) {
         Campaign storage campaign = campaigns[id];
 
         if (msg.value <= 0) revert InsufficientAmount();
@@ -85,8 +91,7 @@ contract Donation is Ownable {
 
         campaignBalances[id] += msg.value;
 
-        // ending the campaign if the moneygoal or timegoal have been reached
-        if (campaignBalances[id] >= campaign.moneyGoal || campaign.timeGoal <= block.timestamp) {
+        if (campaignBalances[id] >= campaign.moneyGoal) {
             campaign.complete = true;
         }
 
@@ -96,14 +101,15 @@ contract Donation is Ownable {
     /// @notice Withdraw money from a campaign that is complete
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
     /// @param id The id of the campaign we want to withdraw from
-    function withdraw(uint256 id) public onlyOwner registered(id) {
+    function withdraw(uint256 id) external onlyOwner campaignNotLocked(id) registered(id) {
+        // todo owner is the person who created the campaign, no? Maybe update this modifier
         Campaign storage campaign = campaigns[id];
 
-        // ending the campaign if the moneygoal or timegoal have been reached
-        if (campaignBalances[id] >= campaign.moneyGoal || campaign.timeGoal <= block.timestamp) {
+        /* no need to check for moneyGoal, since the campaign will be marked
+        as complete: true if a calling donate() caused the moneyGoal to be reached. */
+        if (campaign.timeGoal <= block.timestamp) {
             campaign.complete = true;
         }
-
         if (campaign.complete == false) revert ActiveCampaign();
 
         uint256 balance = campaignBalances[id];
@@ -113,5 +119,13 @@ contract Donation is Ownable {
         if (sent == false) revert("Unable to withdraw funds");
 
         emit FundsWithdrawn(id, balance);
+    }
+
+    function lockCampaign(uint256 id) external onlyOwner {
+        campaingLocked[id] = true;
+    }
+
+    function unlockCampaign(uint256 id) external onlyOwner {
+        campaingLocked[id] = false;
     }
 }

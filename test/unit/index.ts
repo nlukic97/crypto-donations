@@ -85,9 +85,11 @@ describe("Donation contract", function () {
       await expect(
         this.Donation.newCampaign("", "Description for save the planet", deadlineInDays, moneyGoal),
       ).to.be.revertedWith("NoEmptyStrings");
+
       await expect(this.Donation.newCampaign("Some string", "", deadlineInDays, moneyGoal)).to.be.revertedWith(
         "NoEmptyStrings",
       );
+
       await expect(this.Donation.newCampaign("", "", deadlineInDays, moneyGoal)).to.be.revertedWith("NoEmptyStrings");
     });
 
@@ -181,6 +183,8 @@ describe("Donation contract", function () {
       await this.Donation.newCampaign("Save the planet", "Description for save the planet", deadlineInDays, 2000);
       await expect(this.Donation.connect(this.signers.alice).donate(0)).to.be.revertedWith("InsufficientAmount");
     });
+
+    // todo add tests for lock of contracts
 
     it("should revert withdrawl from wallets that are not the owners", async function () {
       // did not create a campaign here since the first modifier is 'isOwner'
