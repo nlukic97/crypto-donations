@@ -184,9 +184,25 @@ describe("Donation contract", function () {
       await expect(this.Donation.connect(this.signers.alice).donate(0)).to.be.revertedWith("InsufficientAmount");
     });
 
-    // todo add tests for lock of contracts
+    // ---------------
+    it("should revert donations when campaign is locked", async function () {
+      const deadlineInDays = 1;
 
-    it("should revert withdrawl from wallets that are not the owners", async function () {
+      await this.Donation.newCampaign("Save the planet", "Description for save the planet", deadlineInDays, 2000);
+      await this.Donation.lockCampaign(0);
+      await expect(this.Donation.connect(this.signers.alice).donate(0)).to.be.revertedWith("campaignLocked");
+    });
+
+    // ---------------
+    it("should revert withdrawal when campaign is locked", async function () {
+      const deadlineInDays = 1;
+
+      await this.Donation.newCampaign("Save the planet", "Description for save the planet", deadlineInDays, 2000);
+      await this.Donation.lockCampaign(0);
+      await expect(this.Donation.connect(this.signers.owner).withdraw(0)).to.be.revertedWith("campaignLocked");
+    });
+
+    it("should revert withdrawl from wallets that is not the owners", async function () {
       // did not create a campaign here since the first modifier is 'isOwner'
       await expect(this.Donation.connect(this.signers.alice).withdraw(1)).to.be.reverted;
     });
