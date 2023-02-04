@@ -16,6 +16,7 @@ contract Donation is Ownable {
         string description;
         uint256 timeGoal;
         uint256 moneyGoal;
+        address creator;
         bool registered;
         bool complete;
     }
@@ -28,6 +29,7 @@ contract Donation is Ownable {
     event NewDonation(uint256 _campaignId, uint256 _amount);
     event NewCampaign(string _title, string _description, uint256 _timeGoal, uint256 _moneyGoal);
 
+    error unauthorized();
     error ActiveCampaign();
     error NoEmptyStrings();
     error InvalidTimeGoal();
@@ -71,6 +73,7 @@ contract Donation is Ownable {
             _description,
             block.timestamp + _deadlineInDays * 1 days,
             _moneyGoal,
+            msg.sender,
             true,
             false
         );
@@ -101,9 +104,10 @@ contract Donation is Ownable {
     /// @notice Withdraw money from a campaign that is complete
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
     /// @param id The id of the campaign we want to withdraw from
-    function withdraw(uint256 id) external onlyOwner campaignNotLocked(id) registered(id) {
+    function withdraw(uint256 id) external campaignNotLocked(id) registered(id) {
         // todo owner is the person who created the campaign, no? Maybe update this modifier
         Campaign storage campaign = campaigns[id];
+        if (msg.sender != campaigns[id].creator) revert unauthorized();
 
         /* no need to check for moneyGoal, since the campaign will be marked
         as complete: true if a calling donate() caused the moneyGoal to be reached. */
