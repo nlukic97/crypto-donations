@@ -132,10 +132,23 @@ contract Donation is Ownable {
 
         /* no need to check for moneyGoal, since the campaign will be marked
         as complete: true if a calling donate() caused the moneyGoal to be reached. */
-        if (campaign.timeGoal <= block.timestamp) {
+
+        // old code
+        /* if (campaign.timeGoal <= block.timestamp) {
             campaignComplete[id] = true;
         }
-        if (campaignComplete[id] == false) revert ActiveCampaign();
+        if (campaignComplete[id] == false) revert ActiveCampaign(); */
+
+        if (campaignComplete[id] == false) {
+            if (campaign.timeGoal <= block.timestamp) {
+                // should I also check for this:
+                //    || campaignBalances[id] >= campaign.moneyGoal
+                // check gas diff
+                campaignComplete[id] = true;
+            } else {
+                revert ActiveCampaign();
+            }
+        }
 
         uint256 balance = campaignBalances[id];
         campaignBalances[id] = 0;
