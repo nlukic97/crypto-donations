@@ -1,10 +1,14 @@
-//SPDX-License-Identifier: Unlicense
+//SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-import "hardhat/console.sol";
+interface INftReward {
+    function awardItem(address receiver, string memory tokenURI) external;
+
+    function balanceOf(address owner) external returns (uint256); // todo is this the right interface?
+}
 
 /// @title Contract for making donation campaigns that accept eth
 /// @author Nikola Lukic
@@ -26,7 +30,14 @@ contract Donation is Ownable {
     mapping(uint256 => bool) public campaingLocked;
     mapping(uint256 => bool) public campaignComplete;
 
+    // todo test
+    INftReward public immutable nftReward;
     bool private _campaignZeroCreated;
+
+    // todo test
+    constructor(address _nftReward) {
+        nftReward = INftReward(_nftReward);
+    }
 
     event CampaignLocked(uint256 id);
     event CampaignUnlocked(uint256 id);
@@ -120,6 +131,10 @@ contract Donation is Ownable {
             campaignComplete[id] = true;
         }
 
+        // check to only mint nft once
+        if (nftReward.balanceOf(msg.sender) > 0 == false) {
+            nftReward.awardItem(msg.sender, "someRandomUri"); // todo test this
+        }
         emit NewDonation(id, msg.value);
     }
 

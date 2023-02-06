@@ -35,17 +35,28 @@ describe("Donation contract", function () {
   let DonationFactory: ContractFactory;
 
   beforeEach(async function () {
-    // async function so that this.signers.owner could be used
-    const deployDonationContract = async () => {
+    // arrow function so that this.signers.owner could be used
+    const deployContracts = async () => {
+      /* 1. Deploy NftReward contract */
+      const NftRewardFactory = await ethers.getContractFactory("NftReward");
+      const NftReward: Contract = await NftRewardFactory.connect(this.signers.owner).deploy();
+      await NftReward.deployed();
+
+      /* 2. Deploy Donation contract */
+      const nftRewardAddress = NftReward.address;
       DonationFactory = await ethers.getContractFactory("Donation");
-      const Donation: Contract = await DonationFactory.connect(this.signers.owner).deploy();
+      const Donation: Contract = await DonationFactory.connect(this.signers.owner).deploy(nftRewardAddress);
       await Donation.deployed();
-      return { Donation };
+
+      /* Transfering ownerhsip of the NftReward contract to the Donation contract */
+      await NftReward.connect(this.signers.owner).transferOwnership(Donation.address);
+      return { Donation, NftReward };
     };
 
-    const { Donation } = await loadFixture(deployDonationContract);
+    const { Donation, NftReward } = await loadFixture(deployContracts);
 
     this.Donation = Donation;
+    this.NftReward = NftReward;
   });
 
   describe("Unit tests", async () => {
@@ -113,7 +124,7 @@ describe("Donation contract", function () {
     });
 
     // ---------------
-    it("should accept Donation", async function () {
+    it("should accept Donation, update campaign balance, and donate Nfts to donors", async function () {
       const deadlineInDays = 1;
       const moneyGoal = ethers.utils.parseEther("100");
 
@@ -123,16 +134,24 @@ describe("Donation contract", function () {
         deadlineInDays,
         moneyGoal,
       );
+      expect(await this.Donation.campaignBalances(0)).to.equal(0);
 
+      // alice making a donation
+      expect(await this.NftReward.balanceOf(this.signers.alice.address)).to.be.equal(0);
       await expect(this.Donation.connect(this.signers.alice).donate(0, { value: 1 }))
         .to.emit(this.Donation, "NewDonation")
         .withArgs(0, 1);
+      expect(await this.NftReward.balanceOf(this.signers.alice.address)).to.be.equal(1);
 
+      // mike making a donation
+      expect(await this.NftReward.balanceOf(this.signers.mike.address)).to.be.equal(0);
       await expect(this.Donation.connect(this.signers.mike).donate(0, { value: 3 }))
         .to.emit(this.Donation, "NewDonation")
         .withArgs(0, 3);
+      expect(await this.NftReward.balanceOf(this.signers.mike.address)).to.be.equal(1);
 
-      expect(await this.Donation.campaignBalances(0)).to.equal(4);
+      // campaign balance
+      expect(await this.Donation.campaignBalances(0)).to.equal(4); // todo check contract balance for ETH
     });
 
     // ---------------

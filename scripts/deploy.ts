@@ -12,10 +12,11 @@ async function main() {
   // If this script is run directly using `node` you may want to call compile
   // manually to make sure everything is compiled
   // await hre.run('compile');
+  const nftRewardAddress = ethers.constants.AddressZero; // todo change this
 
   // We get the contract to deploy
   const Donation = await ethers.getContractFactory("Donation");
-  const donation = await Donation.deploy();
+  const donation = await Donation.deploy(nftRewardAddress);
 
   await donation.deployed();
 
