@@ -1,16 +1,17 @@
 //SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.16;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
 interface INftReward {
-    function awardItem(address receiver, string memory tokenURI) external;
+    function awardItem(address receiver) external;
 
-    function balanceOf(address owner) external returns (uint256); // todo is this the right interface?
+    function balanceOf(address owner) external returns (uint256);
 }
 
 /// @title Contract for making donation campaigns that accept eth
+/// and reward donators one time with an newly minted NFT
 /// @author Nikola Lukic
 /// @notice Made as a task of the Solidity Bootcamp
 contract Donation is Ownable {
@@ -27,7 +28,8 @@ contract Donation is Ownable {
 
     mapping(uint256 => Campaign) public campaigns;
     mapping(uint256 => uint256) public campaignBalances;
-    mapping(uint256 => bool) public campaingLocked;
+    mapping(uint256 => bool) public campaingLockedByCreator;
+    mapping(uint256 => bool) public campaingLockedByOwner;
     mapping(uint256 => bool) public campaignComplete;
 
     // todo test
@@ -60,12 +62,16 @@ contract Donation is Ownable {
         _;
     }
 
-    /// @dev If campaignZero has not been created, there are no campaigns created.
-    /// Otherwise, if the entered id is greater than or equal to campaignId.current(),
-    /// it must be a non existant campaign since campaignId is incremented after
-    /// a campaign in created, waiting to be the id of a newly created campaign
+    /// @dev _campaignZeroCreated will remain false until the first campaign is created.
+    /// If it is false, no campaigns have been created.
+    /// If it is true, we compare the id arg to the counter campaignId.
+    /// When we create the first campaign, its id will be 0, and the campaignId counter
+    /// will incremented to 1 (which will be the id for the next campaign to be created).
+    /// If the id arg passed to this modifier is (following the steps above) is the same
+    /// as campaignId counter (1) or higher,the modifier will revert as
+    /// there is no campaign created with this id.
     modifier registered(uint256 id) {
-        if (id >= campaignId.current()) revert NonExistantCampaign();
+        if (_campaignZeroCreated == false || id >= campaignId.current()) revert NonExistantCampaign();
         _;
     }
 
@@ -74,13 +80,8 @@ contract Donation is Ownable {
         _;
     }
 
-    modifier onlyCreatorOrOwner(uint256 id) {
-        if (msg.sender != campaigns[id].creator && msg.sender != owner()) revert Unauthorized();
-        _;
-    }
-
     modifier lock(uint256 id) {
-        if (campaingLocked[id]) revert CampaignIsLocked();
+        if (campaingLockedByOwner[id] || campaingLockedByCreator[id]) revert CampaignIsLocked();
         _;
     }
 
@@ -107,9 +108,7 @@ contract Donation is Ownable {
             msg.sender
         );
 
-        if (campaignId.current() == 0) {
-            _campaignZeroCreated = true;
-        }
+        if (campaignId.current() == 0) _campaignZeroCreated = true;
 
         campaignId.increment();
 
@@ -133,7 +132,7 @@ contract Donation is Ownable {
 
         // check to only mint nft once
         if (nftReward.balanceOf(msg.sender) > 0 == false) {
-            nftReward.awardItem(msg.sender, "someRandomUri"); // todo test this
+            nftReward.awardItem(msg.sender);
         }
         emit NewDonation(id, msg.value);
     }
@@ -142,23 +141,13 @@ contract Donation is Ownable {
     /// @dev The campaign must have the moneyGoal or timeGoal met in order to withdraw.
     /// @param id The id of the campaign we want to withdraw from
     function withdraw(uint256 id) external registered(id) lock(id) onlyCreator(id) {
-        // todo owner is the person who created the campaign, no? Maybe update this modifier
         Campaign storage campaign = campaigns[id];
 
-        /* no need to check for moneyGoal, since the campaign will be marked
-        as complete: true if a calling donate() caused the moneyGoal to be reached. */
-
-        // old code
-        /* if (campaign.timeGoal <= block.timestamp) {
-            campaignComplete[id] = true;
-        }
-        if (campaignComplete[id] == false) revert ActiveCampaign(); */
-
+        /* 
+        no need to check for moneyGoal, since the campaign will be marked
+        as complete: true if a previous call to the method donate() caused the moneyGoal to be reached. */
         if (campaignComplete[id] == false) {
             if (campaign.timeGoal <= block.timestamp) {
-                // should I also check for this:
-                //    || campaignBalances[id] >= campaign.moneyGoal
-                // check gas diff
                 campaignComplete[id] = true;
             } else {
                 revert ActiveCampaign();
@@ -174,15 +163,19 @@ contract Donation is Ownable {
         emit FundsWithdrawn(id, balance);
     }
 
-    function lockCampaign(uint256 id) external registered(id) lock(id) onlyOwner {
-        campaingLocked[id] = true;
+    /// @notice Allows the contract owner to lock an unlocked campaign, preventing donations and withdrawals to it.
+    /// @param id The id of the campaign to lock
+    function lockCampaign(uint256 id) external onlyOwner registered(id) lock(id) {
+        campaingLockedByOwner[id] = true;
         emit CampaignLocked(id);
     }
 
-    function unlockCampaign(uint256 id) external registered(id) onlyOwner {
-        if (campaingLocked[id] == false) revert campaignAlreadyUnlocked();
+    /// @notice Allows the owner to unlock a previously locked a campaign, allowing donations and withdrawals to it.
+    /// @param id The id of the campaign to unlock
+    function unlockCampaign(uint256 id) external onlyOwner registered(id) {
+        if (campaingLockedByOwner[id] == false) revert campaignAlreadyUnlocked();
 
-        campaingLocked[id] = false;
+        campaingLockedByOwner[id] = false;
         emit CampaignUnlocked(id);
     }
 }

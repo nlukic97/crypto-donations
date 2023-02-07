@@ -1,12 +1,11 @@
 //SPDX-License-Identifier: Unlicensed
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.16;
 
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
-// todo test this entire thing
-contract NftReward is ERC721URIStorage, Ownable {
+contract NftReward is ERC721, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
@@ -19,20 +18,22 @@ contract NftReward is ERC721URIStorage, Ownable {
     error OwnershipNotTrasfered();
 
     modifier ownershipTransferComplete() {
-        if (ownershipTransfered == false) revert OwnershipNotTrasfered(); // todo think of naming convention
+        if (ownershipTransfered == false) revert OwnershipNotTrasfered();
         _;
     }
 
     constructor() ERC721("Thanks4Donating", "TNX4D") {}
 
-    /// todo fix tokenURI param here, make sure to use the right one during tests
-    function awardItem(address receiver, string memory tokenURI) external ownershipTransferComplete onlyOwner {
+    function _baseURI() internal pure override returns (string memory) {
+        return "https://example.com/nft/";
+    }
+
+    function awardItem(address receiver) external ownershipTransferComplete onlyOwner {
         if (balanceOf(receiver) > 0) revert NoMultipleMinting();
 
         uint256 newItemId = _tokenIds.current();
 
         _mint(receiver, newItemId);
-        _setTokenURI(newItemId, tokenURI);
 
         _tokenIds.increment();
         emit NewTokenMinted(newItemId, receiver);

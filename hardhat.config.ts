@@ -14,7 +14,7 @@ dotenv.config();
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.4",
+  solidity: "0.8.16",
   // defaultNetwork: "rinkeby", // it takes 33s for the tests to execute when this is added
   /* networks: {
     hardhat: {
