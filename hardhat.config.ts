@@ -5,6 +5,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
+import "hardhat-storage-layout";
 import "solidity-coverage";
 import "@nomicfoundation/hardhat-network-helpers";
 
